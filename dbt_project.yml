@@ -1,0 +1,69 @@
+name: 'dbt_etl'
+version: '1.0.0'
+config-version: 2
+
+profile: 'dbt_etl'
+
+model-paths: ["models"]
+analysis-paths: ["analysis"]
+test-paths: ["tests"]
+seed-paths: ["data"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+target-path: "target"
+clean-targets: ["target", "dbt_modules"]
+
+vars:
+  use_spend_wh: 0
+
+models:
+  elementary:
+    +schema: "elementary"
+
+  dbt_etl:
+    staging:
+      schema: staging
+      materialized: view
+
+    dimensions:
+      schema: dim
+      materialized: table
+      transient: true
+      pii:
+        +post-hook:
+          - "{{ apply_data_masking(columns=get_pii_columns()) }}"
+      incremental:
+        materialized: incremental
+      view:
+        materialized: view
+
+    facts:
+      schema: fact
+      materialized: table
+      transient: true
+      view:
+        materialized: view
+
+    risk:
+      schema: risk
+      materialized: table
+      transient: true
+      +pre-hook:
+        - "{{ risk_wh() }}"
+      incremental:
+        materialized: incremental
+      view:
+        materialized: view
+
+    reports:
+      schema: reports
+      materialized: table
+      transient: true
+      incremental:
+        materialized: incremental
+      view:
+        materialized: view
+
+query-comment:
+  comment: '{{ get_query_comment(node) }}'
+  append: true
